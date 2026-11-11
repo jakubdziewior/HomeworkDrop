@@ -3,14 +3,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import auth, health
+from app.database import SessionLocal, init_db
+from app.middleware import BodySizeLimitMiddleware
+from app.routers import auth, health, submissions, tasks
 from app.services.auth_service import seed_demo_users
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    init_db()
     if settings.APP_ENV == "development":
-        seed_demo_users()
+        with SessionLocal() as db:
+            seed_demo_users(db)
     yield
 
 
@@ -21,6 +25,8 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+app.add_middleware(BodySizeLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,3 +42,5 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(tasks.router)
+app.include_router(submissions.router)

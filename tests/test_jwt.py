@@ -9,7 +9,7 @@ from app.config import settings
 from app.dependencies import get_current_user, require_role
 from app.main import app
 from app.security import create_access_token, decode_access_token
-from app.services.auth_service import reset_users_db
+from app.models import User
 
 client = TestClient(app, base_url="https://testserver")
 
@@ -29,10 +29,8 @@ TEACHER = {
 
 @pytest.fixture(autouse=True)
 def clean_state():
-    reset_users_db()
     client.cookies.clear()
     yield
-    reset_users_db()
     client.cookies.clear()
 
 
@@ -144,9 +142,10 @@ def test_alg_none_token_rejected():
     assert client.get("/api/v1/auth/me").status_code == 401
 
 
-def test_token_for_deleted_user_rejected():
+def test_token_for_deleted_user_rejected(db):
     _register_and_login(client, STUDENT)
-    reset_users_db()
+    db.delete(db.get(User, 1))
+    db.commit()
     assert client.get("/api/v1/auth/me").status_code == 401
 
 

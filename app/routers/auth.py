@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.database import get_db
 from app.dependencies import get_current_user
 from app.schemas.auth import LoginResponse, MessageResponse, UserLoginRequest, UserRegisterRequest, UserResponse
 from app.security import create_access_token
@@ -39,8 +41,8 @@ def _clear_auth_cookie(response: Response) -> None:
     status_code=status.HTTP_201_CREATED,
     summary="Rejestracja nowego użytkownika"
 )
-def register(data: UserRegisterRequest):
-    return register_user(data)
+def register(data: UserRegisterRequest, db: Session = Depends(get_db)):
+    return register_user(db, data)
 
 
 @router.post(
@@ -49,8 +51,8 @@ def register(data: UserRegisterRequest):
     status_code=status.HTTP_200_OK,
     summary="Logowanie użytkownika (ustawia ciasteczko HttpOnly z tokenem JWT)"
 )
-def login(data: UserLoginRequest, response: Response):
-    user = authenticate_user(data)
+def login(data: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
+    user = authenticate_user(db, data)
     token = create_access_token(user_id=user.id, role=user.role)
     _set_auth_cookie(response, token)
     response.headers["Cache-Control"] = "no-store"

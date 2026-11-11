@@ -26,6 +26,21 @@ class Settings(BaseSettings):
     AUTH_COOKIE_SAMESITE: Literal["strict", "lax", "none"] = "strict"
     AUTH_COOKIE_DOMAIN: str | None = None
 
+    DATABASE_URL: str = "sqlite:///./homeworkdrop.db"
+    DB_ECHO: bool = False
+
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_MB: int = 10
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+    @property
+    def max_request_body_bytes(self) -> int:
+        # Zapas na nagłówki i granice multipart.
+        return self.max_upload_size_bytes + 64 * 1024
+
     @model_validator(mode="after")
     def validate_security_settings(self) -> "Settings":
         if self.APP_ENV == "production":
