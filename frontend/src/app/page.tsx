@@ -1,39 +1,16 @@
 import Link from "next/link";
-import { GraduationCap, BookOpen, ShieldCheck, ArrowRight, Activity } from "lucide-react";
+import {
+  GraduationCap,
+  BookOpen,
+  ShieldCheck,
+  ArrowRight,
+  Lock,
+  UserPlus,
+} from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
-      <header className="border-b border-slate-800/80 bg-slate-900/40 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/20">
-              HD
-            </div>
-            <div>
-              <span className="font-bold text-base tracking-tight text-white">
-                HomeworkDrop
-              </span>
-              <span className="text-[10px] text-slate-400 block -mt-1 font-mono">
-                Platforma prac projektowych
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <a
-              href="http://127.0.0.1:8000/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-300 hover:text-white hover:border-slate-700 transition-colors"
-            >
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              API Swagger
-            </a>
-          </div>
-        </div>
-      </header>
-
+    <div className="flex flex-col justify-between">
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center space-y-6">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
           <ShieldCheck className="w-3.5 h-3.5" />
@@ -49,11 +26,29 @@ export default function Home() {
 
         <p className="max-w-2xl mx-auto text-slate-400 text-sm sm:text-base leading-relaxed">
           Platforma dedykowana studentom oraz prowadzącym Politechniki Śląskiej,
-          gwarantująca walidację załączników, kontrolę dostępu (RBAC) oraz
-          automatyczną blokadę po upływie deadline.
+          gwarantująca walidację załączników, kontrolę dostępu (RBAC),
+          bezpieczne haszowanie haseł (bcrypt) oraz automatyczną blokadę po
+          upływie deadline.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 text-left">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <Link
+            href="/login?mode=login"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-md transition-colors"
+          >
+            <Lock className="w-4 h-4" />
+            Zaloguj się do systemu
+          </Link>
+          <Link
+            href="/login?mode=register"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 font-medium text-xs transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            Zarejestruj nowe konto
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-10 text-left">
           <Link
             href="/student"
             className="group p-6 bg-slate-900/70 border border-slate-800/80 hover:border-indigo-500/60 rounded-2xl transition-all shadow-lg hover:shadow-indigo-500/5 flex flex-col justify-between"
@@ -104,6 +99,6 @@ export default function Home() {
       <footer className="border-t border-slate-800/60 py-6 text-center text-xs text-slate-500">
         HomeworkDrop &copy; {new Date().getFullYear()} &bull; Politechnika Śląska &bull; DevSecOps
       </footer>
-    </main>
+    </div>
   );
 }
