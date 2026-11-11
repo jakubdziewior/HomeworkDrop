@@ -2,11 +2,18 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, User as UserIcon, Shield, Activity } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
 
   return (
     <nav className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
@@ -53,7 +60,7 @@ export default function Navbar() {
               </div>
 
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-medium transition-colors"
               >
                 <LogOut className="w-3.5 h-3.5" />

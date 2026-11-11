@@ -8,6 +8,16 @@ _users_db: Dict[str, dict] = {}
 _next_id: int = 1
 
 
+def user_record_to_response(user_record: dict) -> UserResponse:
+    return UserResponse(
+        id=user_record["id"],
+        email=user_record["email"],
+        full_name=user_record["full_name"],
+        role=user_record["role"],
+        created_at=user_record["created_at"]
+    )
+
+
 def register_user(data: UserRegisterRequest) -> UserResponse:
     global _next_id
     email_key = data.email.lower()
@@ -34,13 +44,7 @@ def register_user(data: UserRegisterRequest) -> UserResponse:
     }
     _users_db[email_key] = user_record
 
-    return UserResponse(
-        id=user_record["id"],
-        email=user_record["email"],
-        full_name=user_record["full_name"],
-        role=user_record["role"],
-        created_at=user_record["created_at"]
-    )
+    return user_record_to_response(user_record)
 
 
 def authenticate_user(data: UserLoginRequest) -> UserResponse:
@@ -59,13 +63,7 @@ def authenticate_user(data: UserLoginRequest) -> UserResponse:
             detail="Nieprawidłowy adres email lub hasło."
         )
 
-    return UserResponse(
-        id=user_record["id"],
-        email=user_record["email"],
-        full_name=user_record["full_name"],
-        role=user_record["role"],
-        created_at=user_record["created_at"]
-    )
+    return user_record_to_response(user_record)
 
 
 def get_user_by_email(email: str) -> Optional[dict]:
@@ -83,3 +81,26 @@ def reset_users_db() -> None:
     global _next_id
     _users_db.clear()
     _next_id = 1
+
+
+DEMO_USERS = [
+    {
+        "email": "p.zielinski@student.edu.pl",
+        "password": "HasloStudenta123!",
+        "full_name": "Piotr Zieliński",
+        "role": "student",
+    },
+    {
+        "email": "t.kaminski@uczelnia.edu.pl",
+        "password": "HasloProwadzacego123!",
+        "full_name": "dr Tomasz Kamiński",
+        "role": "teacher",
+    },
+]
+
+
+def seed_demo_users() -> None:
+    """Tworzy konta testowe (tylko w środowisku deweloperskim)."""
+    for demo in DEMO_USERS:
+        if demo["email"] not in _users_db:
+            register_user(UserRegisterRequest(**demo))

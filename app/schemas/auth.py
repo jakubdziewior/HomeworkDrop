@@ -41,3 +41,7 @@ class UserResponse(BaseModel):
 class LoginResponse(BaseModel):
     message: str
     user: UserResponse
+
+
+class MessageResponse(BaseModel):
+    message: str

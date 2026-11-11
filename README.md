@@ -130,3 +130,16 @@ const response = await fetch("http://127.0.0.1:8000/health");
 const data = await response.json();
 console.log(data);
 ```
+
+---
+
+## Autoryzacja (JWT w ciasteczkach HttpOnly)
+
+* `POST /api/v1/auth/login` – po poprawnym logowaniu backend ustawia ciasteczko `access_token` z tokenem JWT (flagi `HttpOnly`, `Secure`, `SameSite=Strict`). Token **nie** jest zwracany w treści odpowiedzi, więc JavaScript (i ewentualny atak XSS) nie ma do niego dostępu.
+* `GET /api/v1/auth/me` – zwraca dane zalogowanego użytkownika na podstawie ciasteczka (401, jeśli brak/niepoprawny token).
+* `POST /api/v1/auth/logout` – usuwa ciasteczko.
+* Token zawiera `sub`, `role`, `iat`, `nbf`, `exp`, `iss`, `aud`, `jti`; weryfikowany jest podpis, czas ważności, wystawca i odbiorca (tokeny `alg=none` są odrzucane).
+* Ochrona endpointów w kodzie: `Depends(get_current_user)` lub RBAC `Depends(require_role("teacher"))` z [app/dependencies.py](app/dependencies.py).
+* Frontend łączy się z API przez proxy Next.js (`/api/*` → `BACKEND_URL`, domyślnie `http://127.0.0.1:8000`), dzięki czemu ciasteczko jest first-party. Aplikację otwieraj pod adresem `http://localhost:3000`.
+* W trybie `APP_ENV=development` backend tworzy konta testowe używane przez przyciski „Szybkie logowanie testowe”.
+* W produkcji (`APP_ENV=production`) aplikacja nie wystartuje z domyślnym `SECRET_KEY` ani z wyłączonym `AUTH_COOKIE_SECURE`.

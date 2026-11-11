@@ -4,11 +4,13 @@ from app.main import app
 from app.security import hash_password, validate_password_strength, verify_password
 from app.services.auth_service import reset_users_db
 
-client = TestClient(app)
+# HTTPS, aby klient testowy odsyłał ciasteczka z flagą Secure.
+client = TestClient(app, base_url="https://testserver")
 
 
 @pytest.fixture(autouse=True)
 def clean_users():
+    client.cookies.clear()
     reset_users_db()
     yield
     reset_users_db()

@@ -62,8 +62,9 @@ function LoginFormContent() {
 
       setLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/v1/auth/register", {
+        const res = await fetch("/api/v1/auth/register", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: email.trim(),
@@ -97,31 +98,9 @@ function LoginFormContent() {
 
       setLoading(true);
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/v1/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email.trim(),
-            password: password,
-          }),
-        });
+        const loggedIn = await login(email.trim(), password);
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          throw new Error(
-            errData?.detail || "Nieprawidłowy adres email lub hasło."
-          );
-        }
-
-        const data = await res.json();
-        login({
-          id: data.user.id,
-          email: data.user.email,
-          fullName: data.user.full_name,
-          role: data.user.role,
-        });
-
-        if (data.user.role === "teacher") {
+        if (loggedIn.role === "teacher") {
           router.push("/teacher");
         } else {
           router.push("/student");
@@ -134,23 +113,24 @@ function LoginFormContent() {
     }
   };
 
-  const handleDemoLogin = (demoRole: "student" | "teacher") => {
-    if (demoRole === "student") {
-      login({
-        id: 1,
-        email: "p.zielinski@student.edu.pl",
-        fullName: "Piotr Zieliński",
-        role: "student",
-      });
-      router.push("/student");
-    } else {
-      login({
-        id: 2,
-        email: "t.kaminski@uczelnia.edu.pl",
-        fullName: "dr Tomasz Kamiński",
-        role: "teacher",
-      });
-      router.push("/teacher");
+  // Konta testowe tworzone są automatycznie przez backend w trybie APP_ENV=development.
+  const DEMO_ACCOUNTS = {
+    student: { email: "p.zielinski@student.edu.pl", password: "HasloStudenta123!" },
+    teacher: { email: "t.kaminski@uczelnia.edu.pl", password: "HasloProwadzacego123!" },
+  } as const;
+
+  const handleDemoLogin = async (demoRole: "student" | "teacher") => {
+    setError(null);
+    setSuccessMsg(null);
+    setLoading(true);
+    try {
+      const { email: demoEmail, password: demoPassword } = DEMO_ACCOUNTS[demoRole];
+      const loggedIn = await login(demoEmail, demoPassword);
+      router.push(loggedIn.role === "teacher" ? "/teacher" : "/student");
+    } catch (err: any) {
+      setError(err.message || "Błąd logowania testowego.");
+    } finally {
+      setLoading(false);
     }
   };
 

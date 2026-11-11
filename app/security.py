@@ -1,6 +1,13 @@
 import re
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
 import bcrypt
+import jwt
 from fastapi import HTTPException, status
+
+from app.config import settings
 
 
 def hash_password(password: str) -> str:
@@ -38,4 +45,37 @@ def validate_password_strength(password: str) -> None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Hasło musi zawierać co najmniej jeden znak specjalny."
+        )
+
+
+def create_access_token(user_id: int, role: str, expires_minutes: Optional[int] = None) -> str:
+    now = datetime.now(timezone.utc)
+    minutes = expires_minutes if expires_minutes is not None else settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    payload = {
+        "sub": str(user_id),
+        "role": role,
+        "iat": now,
+        "nbf": now,
+        "exp": now + timedelta(minutes=minutes),
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "jti": uuid.uuid4().hex,
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_access_token(token: str) -> dict:
+    try:
+        return jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
+            issuer=settings.JWT_ISSUER,
+            options={"require": ["exp", "iat", "sub", "iss", "aud"]},
+        )
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sesja wygasła lub jest nieprawidłowa. Zaloguj się ponownie."
         )
