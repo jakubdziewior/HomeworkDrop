@@ -138,16 +138,16 @@ function LoginFormContent() {
     if (demoRole === "student") {
       login({
         id: 1,
-        email: "student@homeworkdrop.pl",
-        fullName: "Jan Kowalski",
+        email: "p.zielinski@student.edu.pl",
+        fullName: "Piotr Zieliński",
         role: "student",
       });
       router.push("/student");
     } else {
       login({
         id: 2,
-        email: "teacher@homeworkdrop.pl",
-        fullName: "dr inż. Mirosław Witkowski",
+        email: "t.kaminski@uczelnia.edu.pl",
+        fullName: "dr Tomasz Kamiński",
         role: "teacher",
       });
       router.push("/teacher");
@@ -158,12 +158,12 @@ function LoginFormContent() {
     <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-white tracking-tight">
-          {mode === "login" ? "Zaloguj się do platformy" : "Zarejestruj konto"}
+          {mode === "login" ? "Logowanie" : "Rejestracja"}
         </h2>
         <p className="text-xs text-slate-400">
           {mode === "login"
-            ? "Wprowadź swoje poświadczenia, aby przejść do panelu zadań."
-            : "Utwórz konto studenta lub prowadzącego z haszowaniem hasła bcrypt."}
+            ? "Wprowadź swoje dane, aby przejść do panelu."
+            : "Wypełnij formularz, aby utworzyć konto w systemie."}
         </p>
       </div>
 
@@ -223,7 +223,7 @@ function LoginFormContent() {
                 <input
                   type="text"
                   required
-                  placeholder="np. Jan Kowalski"
+                  placeholder="np. Piotr Zieliński"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
@@ -241,7 +241,7 @@ function LoginFormContent() {
               <input
                 type="email"
                 required
-                placeholder="np. student@homeworkdrop.pl"
+                placeholder="np. p.zielinski@student.edu.pl"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"

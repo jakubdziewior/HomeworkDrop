@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import {
   PlusCircle,
   Users,
@@ -9,8 +11,8 @@ import {
   Calendar,
   FileText,
   Award,
-  Search,
   Filter,
+  Lock,
 } from "lucide-react";
 
 export interface TeacherTask {
@@ -59,27 +61,27 @@ const INITIAL_SUBMISSIONS: StudentSubmission[] = [
   {
     id: 101,
     taskId: 1,
-    studentName: "Jan Kowalski",
-    studentEmail: "j.kowalski@student.polsl.pl",
-    fileName: "ci_cd_pipeline_kowalski.zip",
+    studentName: "Piotr Zieliński",
+    studentEmail: "p.zielinski@student.edu.pl",
+    fileName: "ci_cd_pipeline_zielinski.zip",
     submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
     status: "submitted",
   },
   {
     id: 102,
     taskId: 1,
-    studentName: "Anna Nowak",
-    studentEmail: "a.nowak@student.polsl.pl",
-    fileName: "security_actions_nowak.zip",
+    studentName: "Katarzyna Lewandowska",
+    studentEmail: "k.lewandowska@student.edu.pl",
+    fileName: "security_actions_lewandowska.zip",
     submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
     status: "submitted",
   },
   {
     id: 103,
     taskId: 2,
-    studentName: "Piotr Wiśniewski",
-    studentEmail: "p.wisniewski@student.polsl.pl",
-    fileName: "raport_owasp_zap_wisniewski.pdf",
+    studentName: "Michał Dąbrowski",
+    studentEmail: "m.dabrowski@student.edu.pl",
+    fileName: "raport_owasp_zap_dabrowski.pdf",
     submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 16).toISOString(),
     grade: 5.0,
     feedback: "Bardzo szczegółowy raport z właściwą klasyfikacją podatności.",
@@ -88,6 +90,7 @@ const INITIAL_SUBMISSIONS: StudentSubmission[] = [
 ];
 
 export default function TeacherDashboard() {
+  const { user, isLoading } = useAuth();
   const [tasks, setTasks] = useState<TeacherTask[]>(INITIAL_TEACHER_TASKS);
   const [submissions, setSubmissions] =
     useState<StudentSubmission[]>(INITIAL_SUBMISSIONS);
@@ -104,6 +107,43 @@ export default function TeacherDashboard() {
   );
   const [gradeInput, setGradeInput] = useState<number>(5.0);
   const [feedbackInput, setFeedbackInput] = useState<string>("");
+
+  if (!isLoading && !user) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-4 shadow-xl">
+        <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-white">Wymagane logowanie</h2>
+        <p className="text-xs text-slate-400">
+          Dostęp do panelu prowadzącego wymaga zalogowania na konto z uprawnieniami prowadzącego.
+        </p>
+        <Link
+          href="/login?mode=login"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-colors shadow-sm"
+        >
+          Przejdź do logowania
+        </Link>
+      </div>
+    );
+  }
+
+  if (user?.role === "student") {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-4 shadow-xl">
+        <h2 className="text-xl font-bold text-white">Brak uprawnień</h2>
+        <p className="text-xs text-slate-400">
+          Jesteś zalogowany jako Student. Panel jest dostępny wyłącznie dla Prowadzących.
+        </p>
+        <Link
+          href="/student"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-colors shadow-sm"
+        >
+          Przejdź do Panelu Studenta
+        </Link>
+      </div>
+    );
+  }
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,19 +208,19 @@ export default function TeacherDashboard() {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-800 pb-5 flex flex-wrap items-center justify-between gap-4">
+      <header className="border-b border-slate-800 pb-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-100">
             Panel Prowadzącego
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Zarządzaj tematami zadań, przeglądaj nadesłane prace i wystawiaj oceny.
+          <p className="text-xs text-slate-400 mt-1">
+            Zarządzanie zadaniami i ocenianie przesłanych prac studentów.
           </p>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-colors shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-colors shadow-sm"
         >
           <PlusCircle className="w-4 h-4" />
           Utwórz nowe zadanie
@@ -210,7 +250,7 @@ export default function TeacherDashboard() {
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium uppercase">
-            <span>Ocenione zgłoszenia</span>
+            <span>Ocenione</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-slate-100 mt-2">
@@ -222,12 +262,12 @@ export default function TeacherDashboard() {
 
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Lista nadesłanych prac studentów
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Nadesłane prace studentów
           </h3>
 
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={selectedTaskId}
               onChange={(e) =>
@@ -235,7 +275,7 @@ export default function TeacherDashboard() {
                   e.target.value === "all" ? "all" : Number(e.target.value)
                 )
               }
-              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+              className="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500"
             >
               <option value="all">Wszystkie zadania</option>
               {tasks.map((t) => (
@@ -249,14 +289,14 @@ export default function TeacherDashboard() {
 
         <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/50">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase tracking-wider">
+            <thead className="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3.5 px-4 font-semibold">Student</th>
-                <th className="py-3.5 px-4 font-semibold">Zadanie</th>
-                <th className="py-3.5 px-4 font-semibold">Plik</th>
-                <th className="py-3.5 px-4 font-semibold">Data nadesłania</th>
-                <th className="py-3.5 px-4 font-semibold">Status / Ocena</th>
-                <th className="py-3.5 px-4 font-semibold text-right">Akcja</th>
+                <th className="py-3 px-4 font-semibold">Student</th>
+                <th className="py-3 px-4 font-semibold">Zadanie</th>
+                <th className="py-3 px-4 font-semibold">Plik</th>
+                <th className="py-3 px-4 font-semibold">Data nadesłania</th>
+                <th className="py-3 px-4 font-semibold">Status / Ocena</th>
+                <th className="py-3 px-4 font-semibold text-right">Akcja</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
@@ -293,12 +333,12 @@ export default function TeacherDashboard() {
                         </td>
                         <td className="py-3 px-4">
                           {sub.status === "graded" ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               <Award className="w-3.5 h-3.5" />
                               {sub.grade?.toFixed(1)}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                               <Clock className="w-3.5 h-3.5" />
                               Do oceny
                             </span>
@@ -330,10 +370,10 @@ export default function TeacherDashboard() {
                             <div className="max-w-xl space-y-3 bg-slate-900 border border-slate-800 p-4 rounded-xl">
                               <div className="flex items-center justify-between">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                                  Wystawianie oceny dla: {sub.studentName}
+                                  Wystawianie oceny: {sub.studentName}
                                 </h4>
-                                <span className="text-xs text-slate-400">
-                                  Plik: {sub.fileName}
+                                <span className="text-xs text-slate-400 font-mono">
+                                  {sub.fileName}
                                 </span>
                               </div>
 
@@ -349,22 +389,22 @@ export default function TeacherDashboard() {
                                     }
                                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                                   >
-                                    <option value={2.0}>2.0 (Niedostateczny)</option>
-                                    <option value={3.0}>3.0 (Dostateczny)</option>
-                                    <option value={3.5}>3.5 (Dość dobry)</option>
-                                    <option value={4.0}>4.0 (Dobry)</option>
-                                    <option value={4.5}>4.5 (Ponad dobry)</option>
-                                    <option value={5.0}>5.0 (Bardzo dobry)</option>
+                                    <option value={2.0}>2.0</option>
+                                    <option value={3.0}>3.0</option>
+                                    <option value={3.5}>3.5</option>
+                                    <option value={4.0}>4.0</option>
+                                    <option value={4.5}>4.5</option>
+                                    <option value={5.0}>5.0</option>
                                   </select>
                                 </div>
 
                                 <div className="sm:col-span-3">
                                   <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                                    Komentarz zwrotny (opcjonalny)
+                                    Komentarz zwrotny
                                   </label>
                                   <input
                                     type="text"
-                                    placeholder="np. Dobrze przygotowana konfiguracja..."
+                                    placeholder="Komentarz do pracy..."
                                     value={feedbackInput}
                                     onChange={(e) =>
                                       setFeedbackInput(e.target.value)
@@ -407,8 +447,8 @@ export default function TeacherDashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-slate-100">
-                Utwórz nowe zadanie dla studentów
+              <h3 className="text-base font-bold text-slate-100">
+                Utwórz nowe zadanie
               </h3>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -420,7 +460,7 @@ export default function TeacherDashboard() {
 
             <form onSubmit={handleCreateTask} className="space-y-4">
               {formError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg">
+                <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg">
                   {formError}
                 </div>
               )}
@@ -435,7 +475,7 @@ export default function TeacherDashboard() {
                   placeholder="np. Etap 2 - Implementacja aplikacji"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -446,23 +486,23 @@ export default function TeacherDashboard() {
                 <textarea
                   required
                   rows={3}
-                  placeholder="Szczegółowy opis wymagań projektu..."
+                  placeholder="Opis zadania..."
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Ostateczny termin oddania (Deadline)
+                  Termin oddania (Deadline)
                 </label>
                 <input
                   type="datetime-local"
                   required
                   value={newDeadline}
                   onChange={(e) => setNewDeadline(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -470,13 +510,13 @@ export default function TeacherDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-800 text-xs font-medium text-slate-400 hover:text-slate-200"
+                  className="px-3.5 py-1.5 rounded-lg border border-slate-800 text-xs text-slate-400 hover:text-slate-200"
                 >
                   Anuluj
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
+                  className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
                 >
                   Utwórz zadanie
                 </button>

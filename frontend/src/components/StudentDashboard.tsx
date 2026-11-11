@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 import {
   UploadCloud,
   FileCheck,
@@ -10,7 +12,7 @@ import {
   FileText,
   Calendar,
   Award,
-  ChevronRight,
+  Lock,
 } from "lucide-react";
 
 export interface TaskItem {
@@ -33,7 +35,7 @@ const INITIAL_STUDENT_TASKS: TaskItem[] = [
     description:
       "Przygotowanie pliku konfiguracyjnego GitHub Actions uruchamiającego testy jednostkowe oraz skanowanie SAST.",
     deadline: new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString(),
-    teacherName: "dr inż. Mirosław Witkowski",
+    teacherName: "dr Tomasz Kamiński",
     status: "pending",
   },
   {
@@ -42,7 +44,7 @@ const INITIAL_STUDENT_TASKS: TaskItem[] = [
     description:
       "Stworzenie diagramu ERD oraz pełnej matrycy zagrożeń dla platformy oddawania projektów.",
     deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
-    teacherName: "dr inż. Mirosław Witkowski",
+    teacherName: "dr Tomasz Kamiński",
     status: "pending",
   },
   {
@@ -51,9 +53,9 @@ const INITIAL_STUDENT_TASKS: TaskItem[] = [
     description:
       "Raport ze skanowania podatności z wykorzystaniem narzędzia OWASP ZAP.",
     deadline: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    teacherName: "dr inż. Mirosław Witkowski",
+    teacherName: "dr Tomasz Kamiński",
     status: "graded",
-    submittedFile: "raport_owasp_zap_kowalski.pdf",
+    submittedFile: "raport_owasp_zap_zielinski.pdf",
     submissionDate: new Date(Date.now() - 1000 * 60 * 60 * 16).toISOString(),
     grade: 5.0,
     feedback: "Bardzo szczegółowy raport z właściwą klasyfikacją podatności.",
@@ -61,11 +63,49 @@ const INITIAL_STUDENT_TASKS: TaskItem[] = [
 ];
 
 export default function StudentDashboard() {
+  const { user, isLoading } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_STUDENT_TASKS);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!isLoading && !user) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-4 shadow-xl">
+        <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mx-auto">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-white">Wymagane logowanie</h2>
+        <p className="text-xs text-slate-400">
+          Dostęp do panelu studenta wymaga zalogowania na konto studenckie.
+        </p>
+        <Link
+          href="/login?mode=login"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-colors shadow-sm"
+        >
+          Przejdź do logowania
+        </Link>
+      </div>
+    );
+  }
+
+  if (user?.role === "teacher") {
+    return (
+      <div className="max-w-md mx-auto my-16 p-8 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-4 shadow-xl">
+        <h2 className="text-xl font-bold text-white">Panel Studenta</h2>
+        <p className="text-xs text-slate-400">
+          Jesteś zalogowany jako Prowadzący. Ten widok jest przeznaczony dla studentów.
+        </p>
+        <Link
+          href="/teacher"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-colors shadow-sm"
+        >
+          Przejdź do Panelu Prowadzącego
+        </Link>
+      </div>
+    );
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -124,18 +164,18 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-800 pb-5">
+      <header className="border-b border-slate-800 pb-4">
         <h2 className="text-2xl font-bold text-slate-100">Panel Studenta</h2>
-        <p className="text-sm text-slate-400 mt-1">
-          Zarządzaj swoimi zadaniami, wgrywaj rozwiązania i monitoruj oceny.
+        <p className="text-xs text-slate-400 mt-1">
+          Zadania do wykonania oraz formularz wgrywania rozwiązań.
         </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Lista zadań do wykonania ({tasks.length})
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Aktywne zadania ({tasks.length})
             </h3>
           </div>
 
@@ -164,11 +204,11 @@ export default function StudentDashboard() {
                         <span className="text-xs font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
                           #{task.id}
                         </span>
-                        <h4 className="font-semibold text-slate-100 text-base">
+                        <h4 className="font-semibold text-slate-100 text-sm">
                           {task.title}
                         </h4>
                       </div>
-                      <p className="text-sm text-slate-400 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
                         {task.description}
                       </p>
                     </div>
@@ -203,7 +243,7 @@ export default function StudentDashboard() {
 
                   <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
                     <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-slate-500" />
+                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
                       <span>Termin:</span>
                       <span
                         className={`font-medium ${
@@ -214,7 +254,7 @@ export default function StudentDashboard() {
                       </span>
                     </div>
 
-                    <div className="text-slate-400">
+                    <div className="text-slate-400 text-xs">
                       Prowadzący: {task.teacherName}
                     </div>
                   </div>
@@ -225,33 +265,33 @@ export default function StudentDashboard() {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Szczegóły i przesyłanie rozwiązania
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Wgrywanie rozwiązania
           </h3>
 
           {selectedTask ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-5">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
               <div>
-                <h4 className="font-semibold text-slate-100 text-lg mb-1">
+                <h4 className="font-semibold text-slate-100 text-base mb-1">
                   {selectedTask.title}
                 </h4>
-                <p className="text-sm text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   {selectedTask.description}
                 </p>
               </div>
 
               {selectedTask.status === "graded" && (
-                <div className="p-4 bg-emerald-950/30 border border-emerald-500/30 rounded-lg space-y-2">
+                <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-lg space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs uppercase font-semibold text-emerald-400">
                       Ocena końcowa
                     </span>
-                    <span className="text-xl font-bold text-emerald-300">
+                    <span className="text-lg font-bold text-emerald-300">
                       {selectedTask.grade?.toFixed(1)} / 5.0
                     </span>
                   </div>
                   {selectedTask.feedback && (
-                    <div className="text-xs text-emerald-200/90 pt-2 border-t border-emerald-500/20">
+                    <div className="text-xs text-emerald-200/90 pt-1.5 border-t border-emerald-500/20">
                       <span className="font-medium text-emerald-300">Komentarz: </span>
                       {selectedTask.feedback}
                     </div>
@@ -267,7 +307,7 @@ export default function StudentDashboard() {
                       <div className="font-medium text-slate-200">
                         {selectedTask.submittedFile}
                       </div>
-                      <div className="text-slate-500">
+                      <div className="text-slate-500 text-[11px]">
                         Przesłano:{" "}
                         {selectedTask.submissionDate
                           ? formatDateTime(selectedTask.submissionDate)
@@ -275,7 +315,7 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                   </div>
-                  <span className="text-emerald-400 font-medium">Zapisano</span>
+                  <span className="text-emerald-400 font-medium text-xs">Zapisano</span>
                 </div>
               )}
 
@@ -283,29 +323,29 @@ export default function StudentDashboard() {
                 <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>
-                    Termin przesyłania prac dla tego zadania upłynął ({formatDateTime(selectedTask.deadline)}). Wgrywanie rozwiązań zostało automatycznie zablokowane.
+                    Termin przesyłania prac upłynął ({formatDateTime(selectedTask.deadline)}). Wgrywanie rozwiązań zostało automatycznie zablokowane.
                   </span>
                 </div>
               )}
 
-              <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
+              <form onSubmit={handleUploadSubmit} className="space-y-4 pt-1">
                 <div className="space-y-2">
                   <label className="block text-xs font-medium text-slate-300">
-                    Wgraj plik z rozwiązaniem (np. .zip, .pdf, .py, .tar.gz)
+                    Plik z rozwiązaniem (.zip, .pdf, .py)
                   </label>
                   <label
-                    className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                    className={`flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
                       isPastDeadline(selectedTask.deadline)
                         ? "border-slate-800 bg-slate-950/30 cursor-not-allowed opacity-60"
                         : "border-slate-700 hover:border-indigo-500 bg-slate-950/50"
                     }`}
                   >
-                    <UploadCloud className="w-8 h-8 text-slate-400 mb-2" />
+                    <UploadCloud className="w-7 h-7 text-slate-400 mb-1" />
                     <span className="text-xs font-medium text-slate-300">
                       {selectedFile ? selectedFile.name : "Wybierz plik z dysku"}
                     </span>
-                    <span className="text-[11px] text-slate-500 mt-1">
-                      Maksymalny dozwolony rozmiar: 10 MB
+                    <span className="text-[11px] text-slate-500 mt-0.5">
+                      Limit rozmiaru: 10 MB
                     </span>
                     <input
                       type="file"
@@ -318,7 +358,7 @@ export default function StudentDashboard() {
 
                 {uploadStatus && (
                   <div
-                    className={`p-3 rounded-lg text-xs ${
+                    className={`p-2.5 rounded-lg text-xs ${
                       uploadStatus.includes("pomyślnie")
                         ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                         : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
@@ -335,16 +375,16 @@ export default function StudentDashboard() {
                     isSubmitting ||
                     isPastDeadline(selectedTask.deadline)
                   }
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-medium text-sm transition-colors shadow-sm"
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-medium text-xs transition-colors shadow-sm"
                 >
                   <FileCheck className="w-4 h-4" />
-                  {isSubmitting ? "Wgrywanie pliku..." : "Wyślij rozwiązanie"}
+                  {isSubmitting ? "Wgrywanie..." : "Wyślij rozwiązanie"}
                 </button>
               </form>
             </div>
           ) : (
-            <div className="bg-slate-900 border border-slate-800/80 rounded-xl p-8 text-center text-slate-500 text-sm">
-              Wybierz zadanie z listy po lewej stronie, aby wyświetlić szczegóły i formularz wgrywania pliku.
+            <div className="bg-slate-900 border border-slate-800/80 rounded-xl p-6 text-center text-slate-500 text-xs">
+              Wybierz zadanie z listy, aby wyświetlić szczegóły i formularz wgrywania.
             </div>
           )}
         </div>

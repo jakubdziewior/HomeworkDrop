@@ -42,16 +42,16 @@ def test_password_strength_validation():
 
 def test_registration_success():
     payload = {
-        "email": "student@homeworkdrop.pl",
+        "email": "p.zielinski@student.edu.pl",
         "password": "HasloStudenta123!",
-        "full_name": "Jan Kowalski",
+        "full_name": "Piotr Zieliński",
         "role": "student"
     }
     response = client.post("/api/v1/auth/register", json=payload)
     assert response.status_code == 201
     data = response.json()
-    assert data["email"] == "student@homeworkdrop.pl"
-    assert data["full_name"] == "Jan Kowalski"
+    assert data["email"] == "p.zielinski@student.edu.pl"
+    assert data["full_name"] == "Piotr Zieliński"
     assert data["role"] == "student"
     assert "password" not in data
     assert "hashed_password" not in data
@@ -59,9 +59,9 @@ def test_registration_success():
 
 def test_registration_duplicate_email():
     payload = {
-        "email": "student@homeworkdrop.pl",
+        "email": "p.zielinski@student.edu.pl",
         "password": "HasloStudenta123!",
-        "full_name": "Jan Kowalski",
+        "full_name": "Piotr Zieliński",
         "role": "student"
     }
     first = client.post("/api/v1/auth/register", json=payload)
@@ -74,37 +74,37 @@ def test_registration_duplicate_email():
 
 def test_login_success():
     reg_payload = {
-        "email": "teacher@homeworkdrop.pl",
+        "email": "t.kaminski@uczelnia.edu.pl",
         "password": "HasloProwadzacego123!",
-        "full_name": "Dr inż. Adam Nowak",
+        "full_name": "dr Tomasz Kamiński",
         "role": "teacher"
     }
     reg_res = client.post("/api/v1/auth/register", json=reg_payload)
     assert reg_res.status_code == 201
 
     login_payload = {
-        "email": "teacher@homeworkdrop.pl",
+        "email": "t.kaminski@uczelnia.edu.pl",
         "password": "HasloProwadzacego123!"
     }
     login_res = client.post("/api/v1/auth/login", json=login_payload)
     assert login_res.status_code == 200
     data = login_res.json()
     assert data["message"] == "Logowanie zakończone sukcesem."
-    assert data["user"]["email"] == "teacher@homeworkdrop.pl"
+    assert data["user"]["email"] == "t.kaminski@uczelnia.edu.pl"
     assert data["user"]["role"] == "teacher"
 
 
 def test_login_invalid_password():
     reg_payload = {
-        "email": "student@homeworkdrop.pl",
+        "email": "p.zielinski@student.edu.pl",
         "password": "HasloStudenta123!",
-        "full_name": "Jan Kowalski",
+        "full_name": "Piotr Zieliński",
         "role": "student"
     }
     client.post("/api/v1/auth/register", json=reg_payload)
 
     login_payload = {
-        "email": "student@homeworkdrop.pl",
+        "email": "p.zielinski@student.edu.pl",
         "password": "ZleHaslo123!"
     }
     res = client.post("/api/v1/auth/login", json=login_payload)
