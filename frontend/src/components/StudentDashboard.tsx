@@ -279,6 +279,15 @@ export default function StudentDashboard() {
                 </div>
               )}
 
+              {isPastDeadline(selectedTask.deadline) && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>
+                    Termin przesyłania prac dla tego zadania upłynął ({formatDateTime(selectedTask.deadline)}). Wgrywanie rozwiązań zostało automatycznie zablokowane.
+                  </span>
+                </div>
+              )}
+
               <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <label className="block text-xs font-medium text-slate-300">
