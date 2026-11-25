@@ -11,8 +11,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -50,5 +50,6 @@ frontend/.next/
 frontend/out/
 frontend/build/
 frontend/.env.local
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
