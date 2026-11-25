@@ -43,6 +43,9 @@ storage/
 .pytest_cache/
 .coverage
 htmlcov/
+junit.xml
+raport-testow.xml
+test-results/
 
 # Node & Next.js
 frontend/node_modules/

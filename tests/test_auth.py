@@ -1,4 +1,5 @@
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from app.main import app
 from app.security import hash_password, validate_password_strength, verify_password
@@ -21,22 +22,21 @@ def test_password_hashing_and_verification():
     assert verify_password("ZleHaslo123!", hashed) is False
 
 
-def test_password_strength_validation():
-    with pytest.raises(Exception) as exc_info:
-        validate_password_strength("Krot1!")
-    assert "co najmniej 8 znaków" in str(exc_info.value.detail)
+def test_password_strength_accepts_strong_password():
+    assert validate_password_strength("MocneHaslo123!") is None
 
-    with pytest.raises(Exception) as exc_info:
-        validate_password_strength("BezCyfryZnakuWielkiej")
-    assert "co najmniej jedną cyfrę" in str(exc_info.value.detail)
 
-    with pytest.raises(Exception) as exc_info:
-        validate_password_strength("bez_wielkiej_litery_123!")
-    assert "co najmniej jedną wielką literę" in str(exc_info.value.detail)
-
-    with pytest.raises(Exception) as exc_info:
-        validate_password_strength("BezZnakuSpecjalnego123")
-    assert "co najmniej jeden znak specjalny" in str(exc_info.value.detail)
+@pytest.mark.parametrize("password,expected_message", [
+    ("Krot1!", "co najmniej 8 znaków"),
+    ("BezCyfryZnakuWielkiej!", "co najmniej jedną cyfrę"),
+    ("bez_wielkiej_litery_123!", "co najmniej jedną wielką literę"),
+    ("BezZnakuSpecjalnego123", "co najmniej jeden znak specjalny"),
+], ids=["too-short", "no-digit", "no-uppercase", "no-special-char"])
+def test_password_strength_rejects_weak_password(password, expected_message):
+    with pytest.raises(HTTPException) as exc_info:
+        validate_password_strength(password)
+    assert exc_info.value.status_code == 400
+    assert expected_message in exc_info.value.detail
 
 
 def test_registration_success():

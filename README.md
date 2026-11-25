@@ -261,3 +261,81 @@ Integralność wymuszana na poziomie bazy (nie tylko w API):
 * wszystkie daty przechowywane w UTC; w SQLite włączane jest `PRAGMA foreign_keys=ON`.
 
 Testy korzystają z osobnej bazy SQLite w pamięci ([tests/conftest.py](tests/conftest.py)).
+
+---
+
+## Testy
+
+**Narzędzie:** [pytest](https://docs.pytest.org/) 9.2.0 (instalowany z `requirements.txt`) + `fastapi.testclient.TestClient`. Aplikacja jest uruchamiana w procesie testów – nie trzeba startować serwera, frontendu ani bazy danych, a testy nie łączą się z siecią.
+
+### Uruchomienie
+
+Jedno polecenie uruchamiające **wszystkie** testy (z katalogu głównego projektu, przy aktywnym `.venv`):
+
+```bash
+python -m pytest
+```
+
+Pozostałe warianty:
+
+```bash
+python -m pytest -v                    # pełny zestaw z nazwą każdego testu (482 testy, ~15 s)
+python -m pytest -m unit               # tylko testy jednostkowe (< 1 s)
+python -m pytest -m integration        # tylko pełny obieg przesyłania i oceniania
+python -m pytest -m security           # tylko scenariusze ataków
+python -m pytest tests/security/test_jwt_attacks.py -v       # pojedynczy plik
+python -m pytest -k "zip_bomb or polyglot" -v                # wybrane testy po nazwie
+python -m pytest tests/test_health.py -v                     # test endpointu /health
+python -m pytest --junitxml=raport-testow.xml                # wynik w formacie JUnit XML (CI, plik w .gitignore)
+```
+
+### Zakres testów (wymagania etapu 3)
+
+| Rodzaj | Wymagane minimum | Liczba testów | Lokalizacja |
+| :--- | ---: | ---: | :--- |
+| Testy jednostkowe | 8 | 188 | `tests/unit/` |
+| Testy integracyjne | 5 | 7 | `tests/integration/` |
+| Scenariusze bezpieczeństwa | 2 | 135 | `tests/security/` |
+| Test endpointu `/health` (kod 200 i `{"status": "ok"}`) | 1 | 1 | `tests/test_health.py` |
+| Testy funkcjonalne API z wcześniejszych etapów | – | 151 | `tests/test_*.py` |
+
+Konfiguracja znajduje się w [pytest.ini](pytest.ini) (katalog `tests`, rejestracja markerów, `--strict-markers`). Markery `unit`, `integration` i `security` nadawane są automatycznie na podstawie katalogu, w którym leży test.
+
+### Izolacja środowiska testowego
+
+* Baza: SQLite w pamięci (`DATABASE_URL=sqlite://`), tworzona od zera przed **każdym** testem – każdy test sam tworzy potrzebne dane, więc wynik nie zależy od poprzednich uruchomień ani od kolejności testów.
+* `APP_ENV=test` – lokalny plik `.env` nie jest wczytywany (testy nie zależą od konfiguracji komputera), nie są tworzone konta demonstracyjne.
+* bcrypt w testach używa kosztu 4 zamiast 12 (fixture `fast_password_hashing`) – dzięki temu cały zestaw trwa kilkanaście sekund.
+* Pliki: każdy test dostaje własny katalog tymczasowy jako `UPLOAD_DIR` (fixture `upload_dir`), więc testy nigdy nie zapisują nic w `./uploads`.
+* Wspólne dane testowe (użytkownicy, przykładowe pliki PDF/PNG/ZIP/DOCX, ładunki ataków) i funkcje pomocnicze: [tests/helpers.py](tests/helpers.py).
+
+### Struktura
+
+| Katalog / plik | Rodzaj | Co sprawdza |
+| :--- | :--- | :--- |
+| [tests/unit/test_file_validation.py](tests/unit/test_file_validation.py) | jednostkowe | whitelista rozszerzeń, zgodność deklarowanego MIME, sygnatury (magic bytes) wszystkich typów, pliki tekstowe (UTF-8, bajt NUL, granica 8 KiB), kontenery ZIP/DOCX, oczyszczanie nazwy (Path Traversal, CRLF, RTL override, NFC, długość) |
+| [tests/unit/test_grade_scale.py](tests/unit/test_grade_scale.py) | jednostkowe | skala `2.0–5.0`, brak niejawnej konwersji (`"5.0"`, `true`, `Decimal`), NaN/∞, wartości graniczne, komentarz (przycinanie, limit 2000), `extra="forbid"`, zgodność skali z ograniczeniem `CHECK` w bazie |
+| [tests/unit/test_storage_service.py](tests/unit/test_storage_service.py) | jednostkowe | zapis pod nazwą UUID, SHA-256, unikalność nazw, odrzucanie nazw spoza wzorca (`../`, ścieżki bezwzględne, NUL), 404 dla brakującego pliku |
+| [tests/integration/test_submission_workflow.py](tests/integration/test_submission_workflow.py) | integracyjne | pełny obieg: rejestracja → zadanie → wgranie (PDF/ZIP/DOCX) → poprawka → lista i pobranie przez prowadzącego (zgodność SHA-256) → ocena → podgląd oceny przez studenta → blokada po ocenie → termin → zmiana oceny → usunięcie zadania z plikami; izolacja między zadaniami i prowadzącymi |
+| [tests/security/test_upload_attacks.py](tests/security/test_upload_attacks.py) | bezpieczeństwo | web shell (`.php`, `.jsp`, `.aspx`, `.htaccess`), podwójne rozszerzenia, polyglot PDF/PHP, HTML/SVG (stored XSS), zip bomb i zip slip, Path Traversal w nazwie i identyfikatorze, bajt NUL, limit rozmiaru (fałszywy/niepoprawny `Content-Length`), brak wycieku ścieżek |
+| [tests/security/test_mass_assignment.py](tests/security/test_mass_assignment.py) | bezpieczeństwo | student próbuje wystawić sobie ocenę (JSON, formularz, query string, drugi plik), podmiana `graded_by`/`student_id`, przejęcie zadania, eskalacja roli przy rejestracji, brak hasha hasła w odpowiedziach |
+| [tests/security/test_jwt_attacks.py](tests/security/test_jwt_attacks.py) | bezpieczeństwo | fałszywa rola w tokenie, manipulacja payloadem, `alg=none` (różne wielkości liter), inny algorytm HMAC, słabe klucze, `jku`/`kid`, błędne `iss`/`aud`/`exp`/`nbf`/`sub`, wymagane claimy, token tylko z ciasteczka, wylogowanie, odmowa startu z niebezpieczną konfiguracją |
+| `tests/test_*.py` | funkcjonalne (API) | auth, JWT, RBAC zadań, wgrywanie plików, ocenianie, termin, ograniczenia bazy danych, `/health` |
+
+### Ostatni wynik
+
+| Zestaw | Liczba testów | Wynik |
+| :--- | ---: | :--- |
+| jednostkowe (`-m unit`) | 188 | ✅ |
+| integracyjne (`-m integration`) | 7 | ✅ |
+| bezpieczeństwa (`-m security`) | 135 | ✅ |
+| funkcjonalne API (`tests/test_*.py`, w tym `/health`) | 152 | ✅ |
+| **Razem** | **482** | **482 passed, 0 failed (~15 s)** |
+
+Python 3.11.9, pytest 9.2.0, Windows 11 (25.11.2026). Wynik nie zależy od kolejności (sprawdzone w kolejności odwróconej i losowej). Pełny raport ze zrzutami ekranu: [docs/Raport_testow_HomeworkDrop.pdf](docs/Raport_testow_HomeworkDrop.pdf).
+
+### Dodawanie nowych testów
+
+* Test jednostkowy (bez HTTP i bazy) → `tests/unit/`, integracyjny → `tests/integration/`, scenariusz ataku → `tests/security/` – marker zostanie dodany automatycznie.
+* Do logowania używaj `logged_in(USER)` z [tests/helpers.py](tests/helpers.py) – zwraca klienta z ciasteczkiem JWT (`base_url="https://testserver"`, bo ciasteczko ma flagę `Secure`).
+* Testy bezpieczeństwa powinny sprawdzać nie tylko kod odpowiedzi, ale też **brak skutku** ataku (stan bazy przed/po, zawartość `upload_dir`).

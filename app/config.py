@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 from pydantic import model_validator
@@ -7,7 +8,13 @@ DEFAULT_SECRET_KEY = "homeworkdrop-super-secure-production-secret-key-change-in-
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # W testach (APP_ENV=test) lokalny plik .env jest pomijany – wynik testów
+    # nie może zależeć od konfiguracji komputera, na którym są uruchamiane.
+    model_config = SettingsConfigDict(
+        env_file=None if os.getenv("APP_ENV") == "test" else ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     APP_NAME: str = "HomeworkDrop"
     APP_ENV: str = "development"
