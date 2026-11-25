@@ -1,19 +1,31 @@
 from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi import HTTPException
+
 from app.services.deadline_service import is_deadline_passed, validate_submission_deadline
 
 
-def test_deadline_in_future():
+@pytest.mark.unit
+def test_is_deadline_passed_returns_false_for_future():
     future_deadline = datetime.now(timezone.utc) + timedelta(days=2)
     assert is_deadline_passed(future_deadline) is False
-    validate_submission_deadline(future_deadline)
 
 
-def test_deadline_in_past_raises_400():
+@pytest.mark.unit
+def test_is_deadline_passed_returns_true_for_past():
     past_deadline = datetime.now(timezone.utc) - timedelta(hours=1)
     assert is_deadline_passed(past_deadline) is True
 
+
+@pytest.mark.unit
+def test_validate_submission_deadline_allows_future():
+    future_deadline = datetime.now(timezone.utc) + timedelta(minutes=30)
+    validate_submission_deadline(future_deadline)
+
+
+@pytest.mark.unit
+def test_validate_submission_deadline_raises_400_for_past():
+    past_deadline = datetime.now(timezone.utc) - timedelta(seconds=5)
     with pytest.raises(HTTPException) as exc_info:
         validate_submission_deadline(past_deadline)
 
@@ -22,19 +34,25 @@ def test_deadline_in_past_raises_400():
     assert "blokada deadline" in exc_info.value.detail
 
 
-def test_deadline_timezone_compatibility():
-    now_utc = datetime.now(timezone.utc)
-    past = now_utc - timedelta(minutes=10)
-    future = now_utc + timedelta(minutes=10)
-
-    assert is_deadline_passed(past, now_utc) is True
-    assert is_deadline_passed(future, now_utc) is False
-
-
-def test_deadline_exact_match():
+@pytest.mark.unit
+def test_is_deadline_passed_allows_exact_boundary():
     reference_time = datetime(2026, 11, 11, 12, 0, 0, tzinfo=timezone.utc)
-    just_before = reference_time - timedelta(seconds=1)
-    just_after = reference_time + timedelta(seconds=1)
+    assert is_deadline_passed(reference_time, reference_time) is False
 
-    assert is_deadline_passed(reference_time, just_before) is False
-    assert is_deadline_passed(reference_time, just_after) is True
+
+@pytest.mark.unit
+def test_is_deadline_passed_blocks_one_second_after():
+    reference_time = datetime(2026, 11, 11, 12, 0, 0, tzinfo=timezone.utc)
+    one_second_after = reference_time + timedelta(seconds=1)
+    assert is_deadline_passed(reference_time, one_second_after) is True
+
+
+@pytest.mark.unit
+def test_is_deadline_passed_normalizes_timezone_offsets():
+    deadline_utc = datetime(2026, 11, 11, 12, 0, 0, tzinfo=timezone.utc)
+    cet = timezone(timedelta(hours=1))
+    before_in_cet = datetime(2026, 11, 11, 12, 59, 0, tzinfo=cet)
+    after_in_cet = datetime(2026, 11, 11, 13, 1, 0, tzinfo=cet)
+
+    assert is_deadline_passed(deadline_utc, before_in_cet) is False
+    assert is_deadline_passed(deadline_utc, after_in_cet) is True
