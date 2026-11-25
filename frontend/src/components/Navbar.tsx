@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, User as UserIcon, Shield, Activity } from "lucide-react";
+import { LogOut, User as UserIcon, Activity } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -45,7 +45,10 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-lg border border-slate-700/60 text-xs">
+              <Link
+                href={user.role === "teacher" ? "/teacher" : "/student"}
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 hover:bg-slate-800 rounded-lg border border-slate-700/60 text-xs transition-colors"
+              >
                 <UserIcon className="w-3.5 h-3.5 text-indigo-400" />
                 <span className="font-medium text-slate-200">{user.fullName}</span>
                 <span
@@ -57,7 +60,7 @@ export default function Navbar() {
                 >
                   {user.role === "teacher" ? "Prowadzący" : "Student"}
                 </span>
-              </div>
+              </Link>
 
               <button
                 onClick={handleLogout}

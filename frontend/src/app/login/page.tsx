@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { extractErrorMessage } from "@/lib/api";
 import {
   Lock,
   Mail,
@@ -14,6 +15,11 @@ import {
   BookOpen,
   ArrowRight,
 } from "lucide-react";
+
+const DEMO_ACCOUNTS = {
+  student: { email: "p.zielinski@student.edu.pl", password: "HasloStudenta123!" },
+  teacher: { email: "t.kaminski@uczelnia.edu.pl", password: "HasloProwadzacego123!" },
+} as const;
 
 function LoginFormContent() {
   const router = useRouter();
@@ -32,11 +38,7 @@ function LoginFormContent() {
 
   useEffect(() => {
     const qMode = searchParams.get("mode");
-    if (qMode === "register") {
-      setMode("register");
-    } else {
-      setMode("login");
-    }
+    setMode(qMode === "register" ? "register" : "login");
   }, [searchParams]);
 
   const hasMinLength = password.length >= 8;
@@ -51,7 +53,11 @@ function LoginFormContent() {
     setSuccessMsg(null);
 
     if (mode === "register") {
-      if (!fullName.trim() || !email.trim() || !password) {
+      if (fullName.trim().length < 2) {
+        setError("Imię i nazwisko musi zawierać co najmniej 2 znaki.");
+        return;
+      }
+      if (!email.trim() || !password) {
         setError("Wypełnij wszystkie wymagane pola.");
         return;
       }
@@ -68,25 +74,21 @@ function LoginFormContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: email.trim(),
-            password: password,
+            password,
             full_name: fullName.trim(),
-            role: role,
+            role,
           }),
         });
 
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
-          throw new Error(
-            errData?.detail || "Błąd podczas rejestracji użytkownika."
-          );
+          throw new Error(extractErrorMessage(errData, "Błąd podczas rejestracji użytkownika."));
         }
 
-        setSuccessMsg(
-          "Konto zostało pomyślnie zarejestrowane. Możesz się teraz zalogować."
-        );
+        setSuccessMsg("Konto zostało pomyślnie zarejestrowane. Możesz się teraz zalogować.");
         setMode("login");
-      } catch (err: any) {
-        setError(err.message || "Nie udało się połączyć z serwerem API.");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Nie udało się połączyć z serwerem API.");
       } finally {
         setLoading(false);
       }
@@ -99,25 +101,14 @@ function LoginFormContent() {
       setLoading(true);
       try {
         const loggedIn = await login(email.trim(), password);
-
-        if (loggedIn.role === "teacher") {
-          router.push("/teacher");
-        } else {
-          router.push("/student");
-        }
-      } catch (err: any) {
-        setError(err.message || "Błąd logowania.");
+        router.push(loggedIn.role === "teacher" ? "/teacher" : "/student");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Błąd logowania.");
       } finally {
         setLoading(false);
       }
     }
   };
-
-  // Konta testowe tworzone są automatycznie przez backend w trybie APP_ENV=development.
-  const DEMO_ACCOUNTS = {
-    student: { email: "p.zielinski@student.edu.pl", password: "HasloStudenta123!" },
-    teacher: { email: "t.kaminski@uczelnia.edu.pl", password: "HasloProwadzacego123!" },
-  } as const;
 
   const handleDemoLogin = async (demoRole: "student" | "teacher") => {
     setError(null);
@@ -127,8 +118,8 @@ function LoginFormContent() {
       const { email: demoEmail, password: demoPassword } = DEMO_ACCOUNTS[demoRole];
       const loggedIn = await login(demoEmail, demoPassword);
       router.push(loggedIn.role === "teacher" ? "/teacher" : "/student");
-    } catch (err: any) {
-      setError(err.message || "Błąd logowania testowego.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Błąd logowania testowego.");
     } finally {
       setLoading(false);
     }
@@ -194,174 +185,174 @@ function LoginFormContent() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === "register" && (
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Imię i nazwisko
-              </label>
-              <div className="relative">
-                <UserIcon className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  required
-                  placeholder="np. Piotr Zieliński"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-            </div>
-          )}
-
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">
-              Adres e-mail
+              Imię i nazwisko
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <UserIcon className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="np. p.zielinski@student.edu.pl"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="np. Piotr Zieliński"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
+        )}
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Hasło dostępu
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-              <input
-                type="password"
-                required
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
-
-          {mode === "register" && (
-            <div className="space-y-3 pt-1">
-              <div className="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl space-y-1.5 text-[11px]">
-                <div className="font-semibold text-slate-400 mb-1">
-                  Wymagania dotyczące hasła:
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  {hasMinLength ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <X className="w-3.5 h-3.5 text-slate-600" />
-                  )}
-                  <span className={hasMinLength ? "text-emerald-300" : ""}>
-                    Co najmniej 8 znaków
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  {hasNumber ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <X className="w-3.5 h-3.5 text-slate-600" />
-                  )}
-                  <span className={hasNumber ? "text-emerald-300" : ""}>
-                    Co najmniej jedna cyfra
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  {hasUpper ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <X className="w-3.5 h-3.5 text-slate-600" />
-                  )}
-                  <span className={hasUpper ? "text-emerald-300" : ""}>
-                    Co najmniej jedna wielka litera
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-400">
-                  {hasSpecial ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <X className="w-3.5 h-3.5 text-slate-600" />
-                  )}
-                  <span className={hasSpecial ? "text-emerald-300" : ""}>
-                    Co najmniej jeden znak specjalny
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Wybierz rolę
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRole("student")}
-                    className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-                      role === "student"
-                        ? "bg-indigo-600/20 border-indigo-500 text-indigo-300 shadow-sm"
-                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <GraduationCap className="w-4 h-4" />
-                    Student
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole("teacher")}
-                    className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
-                      role === "teacher"
-                        ? "bg-cyan-600/20 border-cyan-500 text-cyan-300 shadow-sm"
-                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    Prowadzący
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-sm"
-          >
-            {loading ? "Przetwarzanie..." : mode === "login" ? "Zaloguj się" : "Zarejestruj konto"}
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </form>
-
-        <div className="pt-4 border-t border-slate-800/80 space-y-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-center">
-            Szybkie logowanie testowe
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin("student")}
-              className="p-2 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
-              Jako Student
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin("teacher")}
-              className="p-2 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-              Jako Prowadzący
-            </button>
+        <div>
+          <label className="block text-xs font-medium text-slate-300 mb-1">
+            Adres e-mail
+          </label>
+          <div className="relative">
+            <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+            <input
+              type="email"
+              required
+              placeholder="np. p.zielinski@student.edu.pl"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            />
           </div>
         </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-300 mb-1">
+            Hasło dostępu
+          </label>
+          <div className="relative">
+            <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+            <input
+              type="password"
+              required
+              placeholder="••••••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        {mode === "register" && (
+          <div className="space-y-3 pt-1">
+            <div className="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl space-y-1.5 text-[11px]">
+              <div className="font-semibold text-slate-400 mb-1">
+                Wymagania dotyczące hasła:
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                {hasMinLength ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <X className="w-3.5 h-3.5 text-slate-600" />
+                )}
+                <span className={hasMinLength ? "text-emerald-300" : ""}>
+                  Co najmniej 8 znaków
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                {hasNumber ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <X className="w-3.5 h-3.5 text-slate-600" />
+                )}
+                <span className={hasNumber ? "text-emerald-300" : ""}>
+                  Co najmniej jedna cyfra
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                {hasUpper ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <X className="w-3.5 h-3.5 text-slate-600" />
+                )}
+                <span className={hasUpper ? "text-emerald-300" : ""}>
+                  Co najmniej jedna wielka litera
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-slate-400">
+                {hasSpecial ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <X className="w-3.5 h-3.5 text-slate-600" />
+                )}
+                <span className={hasSpecial ? "text-emerald-300" : ""}>
+                  Co najmniej jeden znak specjalny
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Wybierz rolę
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRole("student")}
+                  className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                    role === "student"
+                      ? "bg-indigo-600/20 border-indigo-500 text-indigo-300 shadow-sm"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole("teacher")}
+                  className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                    role === "teacher"
+                      ? "bg-cyan-600/20 border-cyan-500 text-cyan-300 shadow-sm"
+                      : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Prowadzący
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white text-xs font-semibold transition-colors shadow-sm"
+        >
+          {loading ? "Przetwarzanie..." : mode === "login" ? "Zaloguj się" : "Zarejestruj konto"}
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </form>
+
+      <div className="pt-4 border-t border-slate-800/80 space-y-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-center">
+          Szybkie logowanie testowe
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleDemoLogin("student")}
+            className="p-2 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
+            Jako Student
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDemoLogin("teacher")}
+            className="p-2 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl text-slate-300 hover:text-white text-xs flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
+            Jako Prowadzący
+          </button>
+        </div>
       </div>
+    </div>
   );
 }
 
