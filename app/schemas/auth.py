@@ -13,8 +13,8 @@ class UserRegisterRequest(BaseModel):
     @classmethod
     def validate_full_name(cls, v: str) -> str:
         trimmed = v.strip()
-        if not trimmed:
-            raise ValueError("Imię i nazwisko nie mogą być puste.")
+        if len(trimmed) < 2:
+            raise ValueError("Imię i nazwisko musi zawierać co najmniej 2 znaki.")
         return trimmed
 
 

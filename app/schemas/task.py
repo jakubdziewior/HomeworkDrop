@@ -4,10 +4,12 @@ from typing import Optional
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 
-def _strip_required(v: str, field_label: str) -> str:
+def _strip_required(v: str, field_label: str, min_len: int = 3) -> str:
     trimmed = v.strip()
     if not trimmed:
         raise ValueError(f"{field_label} nie może być pusty.")
+    if len(trimmed) < min_len:
+        raise ValueError(f"{field_label} musi zawierać co najmniej {min_len} znaki.")
     return trimmed
 
 

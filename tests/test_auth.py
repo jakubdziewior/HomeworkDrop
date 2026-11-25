@@ -1,10 +1,10 @@
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+
 from app.main import app
 from app.security import hash_password, validate_password_strength, verify_password
 
-# HTTPS, aby klient testowy odsyłał ciasteczka z flagą Secure.
 client = TestClient(app, base_url="https://testserver")
 
 
@@ -12,39 +12,79 @@ client = TestClient(app, base_url="https://testserver")
 def clean_users():
     client.cookies.clear()
     yield
+    client.cookies.clear()
 
 
-def test_password_hashing_and_verification():
+@pytest.mark.unit
+def test_hash_password_returns_bcrypt_hash():
     plain = "SuperTajneHaslo123!"
     hashed = hash_password(plain)
     assert hashed != plain
+    assert hashed.startswith("$2b$")
+
+
+@pytest.mark.unit
+def test_verify_password_accepts_correct_password():
+    plain = "SuperTajneHaslo123!"
+    hashed = hash_password(plain)
     assert verify_password(plain, hashed) is True
+
+
+@pytest.mark.unit
+def test_verify_password_rejects_wrong_password():
+    hashed = hash_password("SuperTajneHaslo123!")
     assert verify_password("ZleHaslo123!", hashed) is False
 
 
-def test_password_strength_accepts_strong_password():
-    assert validate_password_strength("MocneHaslo123!") is None
+@pytest.mark.unit
+def test_verify_password_handles_corrupted_hash():
+    assert verify_password("SuperTajneHaslo123!", "nieprawidlowy-hash") is False
 
 
-@pytest.mark.parametrize("password,expected_message", [
-    ("Krot1!", "co najmniej 8 znaków"),
-    ("BezCyfryZnakuWielkiej!", "co najmniej jedną cyfrę"),
-    ("bez_wielkiej_litery_123!", "co najmniej jedną wielką literę"),
-    ("BezZnakuSpecjalnego123", "co najmniej jeden znak specjalny"),
-], ids=["too-short", "no-digit", "no-uppercase", "no-special-char"])
-def test_password_strength_rejects_weak_password(password, expected_message):
+@pytest.mark.unit
+def test_validate_password_accepts_strong_password():
+    validate_password_strength("SilneHaslo123!")
+
+
+@pytest.mark.unit
+def test_validate_password_rejects_too_short():
     with pytest.raises(HTTPException) as exc_info:
-        validate_password_strength(password)
+        validate_password_strength("Krot1!")
     assert exc_info.value.status_code == 400
-    assert expected_message in exc_info.value.detail
+    assert "co najmniej 8 znaków" in exc_info.value.detail
 
 
+@pytest.mark.unit
+def test_validate_password_rejects_missing_digit():
+    with pytest.raises(HTTPException) as exc_info:
+        validate_password_strength("BezCyfryZnak!")
+    assert exc_info.value.status_code == 400
+    assert "co najmniej jedną cyfrę" in exc_info.value.detail
+
+
+@pytest.mark.unit
+def test_validate_password_rejects_missing_uppercase():
+    with pytest.raises(HTTPException) as exc_info:
+        validate_password_strength("bez_wielkiej_123!")
+    assert exc_info.value.status_code == 400
+    assert "co najmniej jedną wielką literę" in exc_info.value.detail
+
+
+@pytest.mark.unit
+def test_validate_password_rejects_missing_special_character():
+    with pytest.raises(HTTPException) as exc_info:
+        validate_password_strength("BezZnakuSpecjalnego123")
+    assert exc_info.value.status_code == 400
+    assert "co najmniej jeden znak specjalny" in exc_info.value.detail
+
+
+@pytest.mark.unit
 def test_registration_success():
     payload = {
         "email": "p.zielinski@student.edu.pl",
         "password": "HasloStudenta123!",
         "full_name": "Piotr Zieliński",
-        "role": "student"
+        "role": "student",
     }
     response = client.post("/api/v1/auth/register", json=payload)
     assert response.status_code == 201
@@ -56,12 +96,26 @@ def test_registration_success():
     assert "hashed_password" not in data
 
 
+@pytest.mark.unit
+def test_registration_normalizes_email_to_lowercase():
+    payload = {
+        "email": "P.Zielinski@Student.Edu.PL",
+        "password": "HasloStudenta123!",
+        "full_name": "Piotr Zieliński",
+        "role": "student",
+    }
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+    assert response.json()["email"] == "p.zielinski@student.edu.pl"
+
+
+@pytest.mark.unit
 def test_registration_duplicate_email():
     payload = {
         "email": "p.zielinski@student.edu.pl",
         "password": "HasloStudenta123!",
         "full_name": "Piotr Zieliński",
-        "role": "student"
+        "role": "student",
     }
     first = client.post("/api/v1/auth/register", json=payload)
     assert first.status_code == 201
@@ -71,19 +125,44 @@ def test_registration_duplicate_email():
     assert "już istnieje" in second.json()["detail"]
 
 
+@pytest.mark.unit
+def test_registration_rejects_invalid_email():
+    payload = {
+        "email": "niepoprawny-email",
+        "password": "HasloStudenta123!",
+        "full_name": "Piotr Zieliński",
+        "role": "student",
+    }
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.unit
+def test_registration_rejects_invalid_role():
+    payload = {
+        "email": "p.zielinski@student.edu.pl",
+        "password": "HasloStudenta123!",
+        "full_name": "Piotr Zieliński",
+        "role": "admin",
+    }
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.unit
 def test_login_success():
     reg_payload = {
         "email": "t.kaminski@uczelnia.edu.pl",
         "password": "HasloProwadzacego123!",
         "full_name": "dr Tomasz Kamiński",
-        "role": "teacher"
+        "role": "teacher",
     }
     reg_res = client.post("/api/v1/auth/register", json=reg_payload)
     assert reg_res.status_code == 201
 
     login_payload = {
         "email": "t.kaminski@uczelnia.edu.pl",
-        "password": "HasloProwadzacego123!"
+        "password": "HasloProwadzacego123!",
     }
     login_res = client.post("/api/v1/auth/login", json=login_payload)
     assert login_res.status_code == 200
@@ -93,28 +172,30 @@ def test_login_success():
     assert data["user"]["role"] == "teacher"
 
 
+@pytest.mark.unit
 def test_login_invalid_password():
     reg_payload = {
         "email": "p.zielinski@student.edu.pl",
         "password": "HasloStudenta123!",
         "full_name": "Piotr Zieliński",
-        "role": "student"
+        "role": "student",
     }
     client.post("/api/v1/auth/register", json=reg_payload)
 
     login_payload = {
         "email": "p.zielinski@student.edu.pl",
-        "password": "ZleHaslo123!"
+        "password": "ZleHaslo123!",
     }
     res = client.post("/api/v1/auth/login", json=login_payload)
     assert res.status_code == 401
     assert "Nieprawidłowy adres email lub hasło." in res.json()["detail"]
 
 
+@pytest.mark.unit
 def test_login_nonexistent_user():
     login_payload = {
         "email": "nieznany@homeworkdrop.pl",
-        "password": "HasloStudenta123!"
+        "password": "HasloStudenta123!",
     }
     res = client.post("/api/v1/auth/login", json=login_payload)
     assert res.status_code == 401

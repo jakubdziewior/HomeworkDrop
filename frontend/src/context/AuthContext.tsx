@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { extractErrorMessage } from "@/lib/api";
 
 export interface User {
   id: number;
@@ -43,10 +44,6 @@ function mapUser(apiUser: ApiUser): User {
   };
 }
 
-/**
- * Token JWT przechowywany jest w ciasteczku HttpOnly ustawianym przez backend –
- * JavaScript nie ma do niego dostępu. Stan sesji odtwarzany jest przez /me.
- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,11 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Usunięcie danych z poprzedniej wersji, która trzymała sesję w localStorage.
     try {
       localStorage.removeItem("homeworkdrop_user");
     } catch {
-      // ignore
+      // storage unavailable
     }
     refresh().finally(() => setIsLoading(false));
   }, [refresh]);
@@ -83,8 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => null);
-      const detail = typeof errData?.detail === "string" ? errData.detail : null;
-      throw new Error(detail || "Nieprawidłowy adres email lub hasło.");
+      throw new Error(extractErrorMessage(errData, "Nieprawidłowy adres email lub hasło."));
     }
 
     const data = await res.json();

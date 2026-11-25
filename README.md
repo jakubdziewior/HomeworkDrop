@@ -279,10 +279,11 @@ python -m pytest
 Pozostałe warianty:
 
 ```bash
-python -m pytest -v                    # pełny zestaw z nazwą każdego testu (482 testy, ~15 s)
-python -m pytest -m unit               # tylko testy jednostkowe (< 1 s)
-python -m pytest -m integration        # tylko pełny obieg przesyłania i oceniania
-python -m pytest -m security           # tylko scenariusze ataków
+python -m pytest -v                    # pełny zestaw z nazwą każdego testu (511 testów, ~15 s)
+python -m pytest -m unit               # tylko testy jednostkowe
+python -m pytest -m integration        # tylko testy integracyjne
+python -m pytest -m security           # tylko scenariusze bezpieczeństwa
+python -m pytest -m endpoint           # tylko test endpointu /health
 python -m pytest tests/security/test_jwt_attacks.py -v       # pojedynczy plik
 python -m pytest -k "zip_bomb or polyglot" -v                # wybrane testy po nazwie
 python -m pytest tests/test_health.py -v                     # test endpointu /health
@@ -293,13 +294,15 @@ python -m pytest --junitxml=raport-testow.xml                # wynik w formacie 
 
 | Rodzaj | Wymagane minimum | Liczba testów | Lokalizacja |
 | :--- | ---: | ---: | :--- |
-| Testy jednostkowe | 8 | 188 | `tests/unit/` |
-| Testy integracyjne | 5 | 7 | `tests/integration/` |
-| Scenariusze bezpieczeństwa | 2 | 135 | `tests/security/` |
-| Test endpointu `/health` (kod 200 i `{"status": "ok"}`) | 1 | 1 | `tests/test_health.py` |
-| Testy funkcjonalne API z wcześniejszych etapów | – | 151 | `tests/test_*.py` |
+| Testy jednostkowe (`-m unit`) | 8 | 219 | `tests/unit/`, `tests/test_auth.py`, `tests/test_deadline.py`, `tests/test_schemas_validation.py` |
+| Testy integracyjne (`-m integration`) | 5 | 12 | `tests/integration/`, `tests/test_integration_auth_tasks.py` |
+| Scenariusze bezpieczeństwa (`-m security`) | 2 | 143 | `tests/security/`, `tests/test_security_access.py` |
+| Test endpointu `/health` (`-m endpoint`, kod 200 i `{"status": "ok"}`) | 1 | 1 | `tests/test_health.py` |
+| Pozostałe testy API z wcześniejszych etapów (bez markera) | – | 136 | `tests/test_*.py` |
 
-Konfiguracja znajduje się w [pytest.ini](pytest.ini) (katalog `tests`, rejestracja markerów, `--strict-markers`). Markery `unit`, `integration` i `security` nadawane są automatycznie na podstawie katalogu, w którym leży test.
+Liczby to przypadki testowe w rozumieniu pytest (każdy wariant parametryzacji liczy się osobno).
+
+Konfiguracja znajduje się w [pytest.ini](pytest.ini) (katalog `tests`, `pythonpath = .`, rejestracja markerów, `--strict-markers`). Testy w katalogach `tests/unit`, `tests/integration` i `tests/security` dostają marker automatycznie na podstawie katalogu ([tests/conftest.py](tests/conftest.py)); testy w `tests/test_*.py` mają marker podany jawnie dekoratorem (np. `@pytest.mark.unit`).
 
 ### Izolacja środowiska testowego
 
@@ -320,22 +323,29 @@ Konfiguracja znajduje się w [pytest.ini](pytest.ini) (katalog `tests`, rejestra
 | [tests/security/test_upload_attacks.py](tests/security/test_upload_attacks.py) | bezpieczeństwo | web shell (`.php`, `.jsp`, `.aspx`, `.htaccess`), podwójne rozszerzenia, polyglot PDF/PHP, HTML/SVG (stored XSS), zip bomb i zip slip, Path Traversal w nazwie i identyfikatorze, bajt NUL, limit rozmiaru (fałszywy/niepoprawny `Content-Length`), brak wycieku ścieżek |
 | [tests/security/test_mass_assignment.py](tests/security/test_mass_assignment.py) | bezpieczeństwo | student próbuje wystawić sobie ocenę (JSON, formularz, query string, drugi plik), podmiana `graded_by`/`student_id`, przejęcie zadania, eskalacja roli przy rejestracji, brak hasha hasła w odpowiedziach |
 | [tests/security/test_jwt_attacks.py](tests/security/test_jwt_attacks.py) | bezpieczeństwo | fałszywa rola w tokenie, manipulacja payloadem, `alg=none` (różne wielkości liter), inny algorytm HMAC, słabe klucze, `jku`/`kid`, błędne `iss`/`aud`/`exp`/`nbf`/`sub`, wymagane claimy, token tylko z ciasteczka, wylogowanie, odmowa startu z niebezpieczną konfiguracją |
-| `tests/test_*.py` | funkcjonalne (API) | auth, JWT, RBAC zadań, wgrywanie plików, ocenianie, termin, ograniczenia bazy danych, `/health` |
+| [tests/test_auth.py](tests/test_auth.py) | jednostkowe | hashowanie i weryfikacja haseł (też uszkodzony hash), każda reguła siły hasła osobno, rejestracja (normalizacja e-maila, duplikat, zły e-mail, zła rola), logowanie |
+| [tests/test_deadline.py](tests/test_deadline.py) | jednostkowe | blokada terminu: przed/po terminie, dokładna granica, sekunda po terminie, różne strefy czasowe |
+| [tests/test_schemas_validation.py](tests/test_schemas_validation.py) | jednostkowe | schematy wejściowe: przycinanie imienia i tytułu, odrzucanie pustych/za krótkich wartości, puste hasło przy logowaniu |
+| [tests/test_integration_auth_tasks.py](tests/test_integration_auth_tasks.py) | integracyjne | rejestracja → logowanie → tworzenie, edycja, usuwanie i lista zadań; student widzi zadania prowadzącego; wylogowanie odcina dostęp; termin blokuje spóźnione wgranie |
+| [tests/test_security_access.py](tests/test_security_access.py) | bezpieczeństwo | słabe hasła przy rejestracji, żądania bez logowania, RBAC (student nie tworzy/edytuje/usuwa zadań), cudze zadania prowadzącego, eskalacja uprawnień i wyciek hasha przy rejestracji |
+| [tests/test_health.py](tests/test_health.py) | endpoint | `GET /health` zwraca 200 i `{"status": "ok"}` |
+| pozostałe `tests/test_*.py` | funkcjonalne (API) | JWT w ciasteczku, CRUD zadań z RBAC, wgrywanie plików, ocenianie, ograniczenia bazy danych |
 
 ### Ostatni wynik
 
 | Zestaw | Liczba testów | Wynik |
 | :--- | ---: | :--- |
-| jednostkowe (`-m unit`) | 188 | ✅ |
-| integracyjne (`-m integration`) | 7 | ✅ |
-| bezpieczeństwa (`-m security`) | 135 | ✅ |
-| funkcjonalne API (`tests/test_*.py`, w tym `/health`) | 152 | ✅ |
-| **Razem** | **482** | **482 passed, 0 failed (~15 s)** |
+| jednostkowe (`-m unit`) | 219 | ✅ |
+| integracyjne (`-m integration`) | 12 | ✅ |
+| bezpieczeństwa (`-m security`) | 143 | ✅ |
+| endpoint (`-m endpoint`) | 1 | ✅ |
+| pozostałe testy API | 136 | ✅ |
+| **Razem** | **511** | **511 passed, 0 failed (~15 s)** |
 
 Python 3.11.9, pytest 9.2.0, Windows 11 (25.11.2026). Wynik nie zależy od kolejności (sprawdzone w kolejności odwróconej i losowej). Pełny raport ze zrzutami ekranu: [docs/Raport_testow_HomeworkDrop.pdf](docs/Raport_testow_HomeworkDrop.pdf).
 
 ### Dodawanie nowych testów
 
-* Test jednostkowy (bez HTTP i bazy) → `tests/unit/`, integracyjny → `tests/integration/`, scenariusz ataku → `tests/security/` – marker zostanie dodany automatycznie.
+* Test jednostkowy → `tests/unit/`, integracyjny → `tests/integration/`, scenariusz bezpieczeństwa → `tests/security/` – marker zostanie dodany automatycznie. Test umieszczony bezpośrednio w `tests/` trzeba oznaczyć dekoratorem (`@pytest.mark.unit` itd.); dzięki `--strict-markers` literówka w nazwie markera kończy się błędem.
 * Do logowania używaj `logged_in(USER)` z [tests/helpers.py](tests/helpers.py) – zwraca klienta z ciasteczkiem JWT (`base_url="https://testserver"`, bo ciasteczko ma flagę `Secure`).
 * Testy bezpieczeństwa powinny sprawdzać nie tylko kod odpowiedzi, ale też **brak skutku** ataku (stan bazy przed/po, zawartość `upload_dir`).
