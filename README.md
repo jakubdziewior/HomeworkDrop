@@ -335,11 +335,11 @@ Konfiguracja znajduje się w [pytest.ini](pytest.ini) (katalog `tests`, `pythonp
 
 | Zestaw | Liczba testów | Wynik |
 | :--- | ---: | :--- |
-| jednostkowe (`-m unit`) | 219 | ✅ |
-| integracyjne (`-m integration`) | 12 | ✅ |
-| bezpieczeństwa (`-m security`) | 143 | ✅ |
-| endpoint (`-m endpoint`) | 1 | ✅ |
-| pozostałe testy API | 136 | ✅ |
+| jednostkowe (`-m unit`) | 219 | zaliczone |
+| integracyjne (`-m integration`) | 12 | zaliczone |
+| bezpieczeństwa (`-m security`) | 143 | zaliczone |
+| endpoint (`-m endpoint`) | 1 | zaliczone |
+| pozostałe testy API | 136 | zaliczone |
 | **Razem** | **511** | **511 passed, 0 failed (~15 s)** |
 
 Python 3.11.9, pytest 9.2.0, Windows 11 (25.11.2026). Wynik nie zależy od kolejności (sprawdzone w kolejności odwróconej i losowej). Pełny raport ze zrzutami ekranu: [docs/Raport_testow_HomeworkDrop.pdf](docs/Raport_testow_HomeworkDrop.pdf).

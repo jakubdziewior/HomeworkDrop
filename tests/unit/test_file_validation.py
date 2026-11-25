@@ -175,7 +175,8 @@ def test_empty_file_rejected_before_signature_check():
 # --- Pliki tekstowe -----------------------------------------------------------
 
 def test_is_text_accepts_utf8():
-    assert _is_text("Zażółć gęślą jaźń 😀".encode("utf-8"))
+    # \U00020000 - znak CJK zapisywany w UTF-8 na 4 bajtach
+    assert _is_text("Zażółć gęślą jaźń \U00020000".encode("utf-8"))
 
 
 def test_is_text_rejects_null_byte():
